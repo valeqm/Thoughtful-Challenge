@@ -5,6 +5,8 @@ import shutil
 import pandas as pd
 from datetime import datetime
 from RPA.Browser.Selenium import Selenium
+from RPA.Robocorp.WorkItems import WorkItems
+
 
 
 class NewsScraper:
@@ -206,13 +208,16 @@ class NewsScraper:
         self.search_news()
         self.select_order()
         return self.scrape_articles()
+    
+    @classmethod
+    def from_work_item(cls):
+        work_items = WorkItems()
+        params = work_items.get("parameters")
+        return cls(params['search_phrase'],
+                   params['category'],
+                   params['months'])
 
 
 if __name__ == "__main__":
-    search_phrase = "Technology"
-    category = "Science"
-    months = 1
-
-    scraper = NewsScraper(search_phrase, category, months)
-    data = scraper.run()
-    print("Scraping complete. Data saved to:", scraper.excel_file)
+    scraper = NewsScraper.from_work_item()
+    scraper.run()
