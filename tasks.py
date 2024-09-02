@@ -2,10 +2,12 @@ import os
 import re
 import time
 import shutil
-import pandas as pd
+from openpyxl import Workbook
 from datetime import datetime
 from RPA.Browser.Selenium import Selenium
 from RPA.Robocorp.WorkItems import WorkItems
+from robocorp.tasks import task
+
 
 
 
@@ -17,7 +19,7 @@ class NewsScraper:
         self.excel_file = "output/data_news.xlsx"
         self.browser = Selenium()
         self.base_url = "https://www.aljazeera.com/"
-        self.image_dir = os.path.join(os.getcwd(), "output/images")
+        self.image_dir = os.path.join(os.getcwd(), "output/")
         self._prepare_directories()
 
     def _prepare_directories(self):
@@ -133,7 +135,7 @@ class NewsScraper:
                 if idx == 0:
                     self.browser.execute_javascript("window.scrollTo(0, 0);")
                 img.screenshot(img_filepath)
-                image_paths.append(img_filepath)
+                image_paths.append(img_filename)
             except Exception as e:
                 print(f"Failed to capture image {idx + 1}: {e}")
 
@@ -165,6 +167,9 @@ class NewsScraper:
 
     def scrape_articles(self):
         """Main method to scrape articles based on search phrase, category, and time frame."""
+        self.open_site()
+        self.search_news()
+        self.select_order()
         all_dates_met_condition = True
         while all_dates_met_condition:
             time.sleep(2)
@@ -198,26 +203,36 @@ class NewsScraper:
                 'contains_money': money_in_article
             })
 
-        df = pd.DataFrame(articles_data)
-        df.to_excel(self.excel_file, index=False)
+        self.save_articles_to_excel(articles_data, self.excel_file)
         return articles_data
 
-    def run(self):
-        """Run the entire scraping process."""
-        self.open_site()
-        self.search_news()
-        self.select_order()
-        return self.scrape_articles()
+    def save_articles_to_excel(self,articles_data, excel_file):
+        """Save a list of articles data to an Excel file."""
+        wb = Workbook()
+        ws = wb.active
+        header = ['title', 'date', 'description', 'picture_filename', 'search_phrase_count', 'contains_money']
+        ws.append(header)
+        for article in articles_data:
+            row = [
+                article['title'],
+                article['date'],
+                article['description'],
+                article['picture_filename'],
+                article['search_phrase_count'],
+                article['contains_money']
+            ]
+            ws.append(row)
+        wb.save(excel_file)
     
-    @classmethod
-    def from_work_item(cls):
-        work_items = WorkItems()
-        params = work_items.get("parameters")
-        return cls(params['search_phrase'],
-                   params['category'],
-                   params['months'])
-
-
-if __name__ == "__main__":
-    scraper = NewsScraper.from_work_item()
-    scraper.run()
+@task
+def from_work_item():
+    """Extract parameters from the work item and run the news scraper."""
+    work_items = WorkItems()
+    work_items.get_input_work_item()
+    variables = work_items.get_work_item_variables()
+    search_phrase = variables.get('search_phrase', 'Technology')
+    category = variables.get('category', 'news')
+    months = variables.get('months', 1) 
+    scraper = NewsScraper(search_phrase, category, months)
+    articles = scraper.scrape_articles()
+    print(f"Scraped {len(articles)} articles.")
