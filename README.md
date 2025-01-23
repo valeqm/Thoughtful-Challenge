@@ -43,3 +43,12 @@ Example:
 1. Push your code to a public GitHub repository.
 2. Create a Robocorp Control Room process using your GitHub repo.
 3. Ensure the process runs successfully and stores results in the `/output` directory.
+
+## **Technologies Used**
+- **Robocorp**
+- **Robocloud (Robocorp Control Room)**
+- **Python**
+- **Selenium (via rpaframework)**
+- **GitHub**
+- **Excel (xlsx format)**
+- **OOP (Object-Oriented Programming)**
